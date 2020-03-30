@@ -1,0 +1,103 @@
+<html>
+<head>
+<meta charset='utf-8'>
+<title>Example of Mapbox/Supercluster with deck.gl</title>
+<script src="https://unpkg.com/deck.gl@^8.0.0/dist.min.js"></script>
+<script src="https://unpkg.com/supercluster@7.0.0/dist/supercluster.min.js"></script>
+<script src="https://api.tiles.mapbox.com/mapbox-gl-js/v1.8.0/mapbox-gl.js"></script>
+</head>
+<body style="margin:0"></body>
+<script type="text/javascript">
+
+	/*
+		mapbox / supercluster
+		https://github.com/mapbox/supercluster
+	*/
+	let clusterIndex = new Supercluster({radius:40, maxZoom:16});
+
+	let lastZoom = 5;
+	let clusters = null;
+
+	const {MapboxLayer, ScatterplotLayer} = deck;
+
+	mapboxgl.accessToken = 'pk.eyJ1IjoidGFrYWhpcm8wMTI5IiwiYSI6ImNqdHpiMW1vbzI5Nzk0NG1wcXNiZGdoc3QifQ.Q2NF3B1NKJJ4GnWhsGq5Fg';
+
+	const map = new mapboxgl.Map({
+		container: document.body,
+		style: 'mapbox://styles/mapbox/light-v9',
+		center: [139.77, 35.55],
+		zoom: lastZoom,
+		pitch: 0
+	});
+
+	// source data
+	const url = "https://docs.mapbox.com/mapbox-gl-js/assets/earthquakes.geojson";
+	
+	map.on('load', () => {
+		// Load GeoJSON 'point' data
+		fetch(url, {methods: 'GET'})
+		.then(res => { return res.json() })
+		.then(data => {
+			// Execute clustering
+			clusterIndex.load(data.features);
+
+			const bounds = map.getBounds();
+			const bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]
+			const zoom = Math.floor(map.getZoom());
+
+			// Retrieve clustered GeoJSON data corresponding to a zoom level.
+			clusters = clusterIndex.getClusters(bbox, zoom);
+
+			map.addLayer(new MapboxLayer({
+				id: 'cluster-circle',
+				type: ScatterplotLayer,
+				data: clusters,
+				getPosition: d => d.geometry.coordinates,
+				getRadius: d => d.properties.point_count,
+				radiusScale: 10,
+				radiusMinPixels: 10,
+				lineWidthUnits: 'pixels',
+				lineWidthMinPixels: 1,
+				opacity: 0.5,
+				stroked: true,
+				filled: true,
+				getFillColor: [0, 200,255, 100],
+				pickable: true,
+				onClick: info => console.log(info.object.properties)
+			}))
+		})
+	})
+
+	// Update the deck.gl layer at each zoom level.
+	map.on('zoom', () => {
+		const zoom = Math.floor(map.getZoom());
+		if(lastZoom != zoom) {
+			const bounds = map.getBounds();
+			const bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]
+
+			map.removeLayer('cluster-circle');
+
+			map.addLayer(new MapboxLayer({
+				id: 'cluster-circle',
+				type: ScatterplotLayer,
+				data: clusterIndex.getClusters(bbox, zoom),
+				getPosition: d => d.geometry.coordinates,
+				getRadius: d => d.properties.point_count,
+				radiusScale: 10,
+				radiusMinPixels: 10,
+				lineWidthUnits: 'pixels',
+				lineWidthMinPixels: 1,
+				opacity: 0.5,
+				stroked: true,
+				filled: true,
+				getFillColor: [0, 200,255, 100],
+				pickable: true,
+				onClick: info => console.log(info.object.properties)
+			}))
+
+			lastZoom = zoom;
+		}
+	})
+
+</script>
+</html> 
