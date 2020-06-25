@@ -4,7 +4,7 @@ Mapbox/Superclusterライブラリを使って GeoJSONのポイントデータ�
 
 ## サンプルページ
 
-[HTML](https://tkhrmeme.github.io/deckgl_supercluster/deckgl_supercluster.html)
+地震の震央データを可視化したもの→[HTML](https://tkhrmeme.github.io/deckgl_supercluster/deckgl_supercluster.html)
 
 ## 参考
 
